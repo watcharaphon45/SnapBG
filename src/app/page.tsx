@@ -12,6 +12,8 @@ import { ModelProgress } from "@/components/ModelProgress";
 import {
   applyMaskAndExportPng,
   downloadPngBlob,
+  ensureBrowserCompatibleImage,
+  isLikelyHeicFile,
   prepareImageForAI,
 } from "@/lib/image-utils";
 import type {
@@ -65,6 +67,7 @@ export default function HomePage() {
     useState<BackgroundPreviewMode>("transparent");
 
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isConvertingHeic, setIsConvertingHeic] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -228,7 +231,7 @@ export default function HomePage() {
   }, [setSafeProcessedUrl, updateAggregateProgress]);
 
   const handleImageSelect = useCallback(
-    async (file: File) => {
+    async (rawFile: File) => {
       const worker = workerRef.current;
       if (!worker) {
         setError("AI Worker is not ready yet. Please refresh and try again.");
@@ -237,15 +240,38 @@ export default function HomePage() {
 
       const jobId = String(++jobCounterRef.current);
       activeJobIdRef.current = jobId;
-      sourceFileRef.current = file;
+      sourceFileRef.current = null;
       lastMaskRef.current = null;
       transparentBlobRef.current = null;
 
       setError(null);
       setDurationMs(null);
       setDimensions(null);
-      setIsProcessing(true);
       setSafeProcessedUrl(null);
+      setSafeOriginalUrl(null);
+
+      let file = rawFile;
+      if (isLikelyHeicFile(rawFile)) {
+        setIsConvertingHeic(true);
+      }
+
+      try {
+        file = await ensureBrowserCompatibleImage(rawFile);
+        if (activeJobIdRef.current !== jobId) return;
+      } catch (err) {
+        if (activeJobIdRef.current !== jobId) return;
+        setError(
+          err instanceof Error ? err.message : "Failed to convert HEIC image.",
+        );
+        return;
+      } finally {
+        if (activeJobIdRef.current === jobId) {
+          setIsConvertingHeic(false);
+        }
+      }
+
+      sourceFileRef.current = file;
+      setIsProcessing(true);
       setSafeOriginalUrl(URL.createObjectURL(file));
 
       try {
@@ -389,8 +415,11 @@ export default function HomePage() {
         {!originalUrl ? (
           <Dropzone
             onImageSelect={handleImageSelect}
-            disabled={isProcessing}
+            disabled={isProcessing || isConvertingHeic}
             error={error}
+            statusText={
+              isConvertingHeic ? "Converting HEIC image locally..." : null
+            }
           />
         ) : (
           <div className="flex flex-col gap-4">

@@ -1,20 +1,31 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { AlertCircle, ClipboardPaste, ImageIcon, ShieldCheck, Upload } from "lucide-react";
+import {
+  AlertCircle,
+  ClipboardPaste,
+  ImageIcon,
+  Loader2,
+  ShieldCheck,
+  Upload,
+} from "lucide-react";
+import { isSupportedImageFile } from "@/lib/image-utils";
 
 export interface DropzoneProps {
   onImageSelect: (file: File) => void;
   disabled?: boolean;
   error?: string | null;
+  statusText?: string | null;
 }
 
-const ACCEPTED_MIME_TYPES = "image/png,image/jpeg,image/webp,image/avif";
+const ACCEPTED_MIME_TYPES =
+  "image/png,image/jpeg,image/webp,image/avif,image/heic,image/heif,.heic,.heif";
 
 export function Dropzone({
   onImageSelect,
   disabled = false,
   error = null,
+  statusText = null,
 }: DropzoneProps) {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const dragDepthRef = useRef(0);
@@ -24,8 +35,10 @@ export function Dropzone({
   const validateAndSelect = useCallback(
     (file: File | null | undefined) => {
       if (!file || disabled) return;
-      if (!file.type.startsWith("image/")) {
-        setLocalError("Please select a valid image file (PNG, JPG, WebP, or AVIF).");
+      if (!isSupportedImageFile(file)) {
+        setLocalError(
+          "Please select a valid image file (PNG, JPG, WebP, AVIF, or HEIC).",
+        );
         return;
       }
       setLocalError(null);
@@ -42,9 +55,9 @@ export function Dropzone({
 
       for (let i = 0; i < items.length; i++) {
         const item = items[i];
-        if (item.type.startsWith("image/")) {
+        if (item.kind === "file") {
           const file = item.getAsFile();
-          if (file) {
+          if (file && isSupportedImageFile(file)) {
             event.preventDefault();
             validateAndSelect(file);
             return;
@@ -150,11 +163,19 @@ export function Dropzone({
               : "border-sky-100 bg-sky-50 text-blue-600 group-hover:scale-105 group-hover:border-blue-200"
           }`}
         >
-          <Upload className="h-7 w-7" />
+          {statusText ? (
+            <Loader2 className="h-7 w-7 animate-spin" />
+          ) : (
+            <Upload className="h-7 w-7" />
+          )}
         </div>
 
         <h2 className="text-lg font-semibold text-slate-900">
-          {isDragging ? "Drop your image here" : "Drop an image, click to browse, or paste"}
+          {statusText
+            ? statusText
+            : isDragging
+              ? "Drop your image here"
+              : "Drop an image, click to browse, or paste"}
         </h2>
         <p className="mt-1.5 max-w-md text-sm text-slate-500">
           Remove backgrounds instantly in your browser. Images never leave your device.
@@ -163,7 +184,7 @@ export function Dropzone({
         <div className="mt-6 flex flex-wrap items-center justify-center gap-2 text-xs text-slate-700">
           <span className="inline-flex items-center gap-1.5 rounded-full border border-sky-100 bg-sky-50/80 px-3 py-1">
             <ImageIcon className="h-3.5 w-3.5 text-blue-600" />
-            PNG, JPG, WebP
+            PNG, JPG, WebP, HEIC
           </span>
           <span className="inline-flex items-center gap-1.5 rounded-full border border-sky-100 bg-sky-50/80 px-3 py-1">
             <ClipboardPaste className="h-3.5 w-3.5 text-blue-600" />

@@ -22,6 +22,66 @@ export interface CompositeOptions {
   backgroundColor?: string | null;
 }
 
+const HEIC_EXTENSION_REGEX = /\.(heic|heif)$/i;
+
+/**
+ * Checks whether a filename has a .heic or .heif extension.
+ */
+export function isHeicFilename(name: string): boolean {
+  return HEIC_EXTENSION_REGEX.test(name);
+}
+
+/**
+ * Checks whether a File is likely HEIC/HEIF based on extension or MIME type.
+ */
+export function isLikelyHeicFile(file: File): boolean {
+  return (
+    isHeicFilename(file.name) ||
+    file.type === "image/heic" ||
+    file.type === "image/heif"
+  );
+}
+
+/**
+ * Checks whether a File is a supported image (standard browser image MIME or .heic/.heif).
+ */
+export function isSupportedImageFile(file: File): boolean {
+  return file.type.startsWith("image/") || isHeicFilename(file.name);
+}
+
+/**
+ * Converts a HEIC/HEIF file into a browser-decodable PNG File entirely client-side
+ * using lazy-loaded WebAssembly (`heic-to/next`). Non-HEIC images are returned as-is.
+ */
+export async function ensureBrowserCompatibleImage(file: File): Promise<File> {
+  if (!isLikelyHeicFile(file) && file.type.startsWith("image/")) {
+    return file;
+  }
+
+  const { isHeic, heicTo } = await import("heic-to/next");
+  const heic = await isHeic(file);
+
+  if (!heic) {
+    if (file.type.startsWith("image/")) {
+      return file;
+    }
+    throw new Error("Unsupported image format.");
+  }
+
+  const convertedBlob = await heicTo({
+    blob: file,
+    type: "image/png",
+  });
+
+  const lastDot = file.name.lastIndexOf(".");
+  const baseName = lastDot > 0 ? file.name.slice(0, lastDot) : file.name;
+
+  return new File([convertedBlob], `${baseName}.png`, {
+    type: convertedBlob.type || "image/png",
+    lastModified: file.lastModified,
+  });
+}
+
 /**
  * Calculates target dimensions keeping aspect ratio, scaling down only if
  * the longest side exceeds maxDimension.
