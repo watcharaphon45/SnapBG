@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <defs>
+    <linearGradient id="snapbg-grad" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#0ea5e9" />
+      <stop offset="100%" stop-color="#2563eb" />
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="16" fill="url(#snapbg-grad)" />
+  <path
+    d="M32 14L35.8 25.2L47 29L35.8 32.8L32 44L28.2 32.8L17 29L28.2 25.2L32 14Z"
+    fill="#ffffff"
+  />
+  <path
+    d="M47 13L48.6 17.4L53 19L48.6 20.6L47 25L45.4 20.6L41 19L45.4 17.4L47 13Z"
+    fill="#ffffff"
+    opacity="0.9"
+  />
+  <path
+    d="M19 41L20.3 44.7L24 46L20.3 47.3L19 51L17.7 47.3L14 46L17.7 44.7L19 41Z"
+    fill="#ffffff"
+    opacity="0.85"
+  />
+</svg>
